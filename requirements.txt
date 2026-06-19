@@ -1,0 +1,7 @@
+openpyxl>=3.1.0
+requests>=2.28.0
+
+# Dev / testing
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0
