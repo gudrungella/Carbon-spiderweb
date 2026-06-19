@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telecom Inventory Emissions Calculator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: #f5f7fa; color: #1a1a2e; }
+
+  header {
+    background: #07011E;
+    color: #fff;
+    padding: 1.25rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  header h1 { font-size: 1.2rem; font-weight: 600; }
+  .privacy-badge {
+    margin-left: auto;
+    background: #1a3a1a;
+    border: 1px solid #2d6a2d;
+    color: #7ed97e;
+    padding: .3rem .75rem;
+    border-radius: 20px;
+    font-size: .8rem;
+    white-space: nowrap;
+  }
+
+  main { max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; }
+
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #3805E3; }
+
+  .upload-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: .85rem;
+  }
+  .upload-item label { display: block; font-size: .8rem; color: #555; margin-bottom: .3rem; }
+  .upload-item label span.req { color: #c00; }
+  .upload-item input[type=file] {
+    width: 100%;
+    padding: .4rem;
+    border: 1.5px dashed #ccc;
+    border-radius: 6px;
+    font-size: .78rem;
+    cursor: pointer;
+    background: #fafafa;
+    transition: border-color .2s;
+  }
+  .upload-item input[type=file]:hover { border-color: #3805E3; }
+  .upload-item.has-file input[type=file] { border-color: #2d6a2d; background: #f0fff0; }
+
+  .run-row { text-align: center; margin-top: 1rem; }
+  button#runBtn {
+    background: #3805E3;
+    color: #fff;
+    border: none;
+    padding: .75rem 2.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s, opacity .2s;
+  }
+  button#runBtn:hover:not(:disabled) { background: #2504b0; }
+  button#runBtn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .status-card { display: none; }
+  .status-card.visible { display: block; }
+  .status-line { font-size: .85rem; color: #555; margin-bottom: .4rem; }
+  .status-line.error { color: #c00; font-weight: 600; }
+
+  .progress-bar-wrap {
+    height: 6px; background: #eee; border-radius: 3px; margin: .75rem 0;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%; background: #3805E3; border-radius: 3px;
+    width: 0%; transition: width .4s ease;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: .6rem;
+    margin-top: .75rem;
+  }
+  .summary-box {
+    background: #f5f7fa;
+    border-radius: 6px;
+    padding: .6rem .8rem;
+    font-size: .8rem;
+  }
+  .summary-box .label { color: #666; margin-bottom: .2rem; }
+  .summary-box .counts { font-weight: 600; }
+  .counts .ok     { color: #2d6a2d; }
+  .counts .warned { color: #92400e; }
+  .counts .rej    { color: #c00; }
+
+  .unresolved-list {
+    background: #fffbeb;
+    border: 1px solid #f59e0b;
+    border-radius: 6px;
+    padding: .75rem 1rem;
+    margin-top: .75rem;
+    font-size: .8rem;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+  .unresolved-list h4 { color: #92400e; margin-bottom: .4rem; }
+  .unresolved-list li { margin-left: 1rem; color: #555; }
+
+  .report-section { display: none; }
+  .report-section.visible { display: block; }
+  .report-section h2 { font-size: 1rem; font-weight: 600; margin-bottom: .75rem; color: #3805E3; }
+  .report-actions { display: flex; gap: .75rem; margin-bottom: .75rem; }
+  .download-btn {
+    background: #f5f7fa;
+    border: 1px solid #ccc;
+    padding: .4rem 1rem;
+    border-radius: 6px;
+    font-size: .85rem;
+    cursor: pointer;
+  }
+  .download-btn:hover { background: #e8ecf2; }
+  iframe#reportFrame {
+    width: 100%;
+    height: 900px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+  }
+
+  .pyodide-loading {
+    font-size: .78rem;
+    color: #888;
+    text-align: center;
+    padding: .5rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Telecom Inventory Emissions Calculator</h1>
+  <span class="privacy-badge">&#x1F512; Runs entirely in your browser — no data is transmitted</span>
+</header>
+
+<main>
+
+  <!-- Upload panel -->
+  <div class="card">
+    <h2>Upload Data Files</h2>
+    <div class="upload-grid">
+      <div class="upload-item" id="wrap_cell_site">
+        <label for="cell_site_file">Cell Sites <span class="req">*</span></label>
+        <input type="file" id="cell_site_file" accept=".xlsx">
+      </div>
+      <div class="upload-item" id="wrap_active">
+        <label for="active_file">Active Components <span class="req">*</span></label>
+        <input type="file" id="active_file" accept=".xlsx">
+      </div>
+      <div class="upload-item" id="wrap_passive">
+        <label for="passive_file">Passive Components <span class="req">*</span></label>
+        <input type="file" id="passive_file" accept=".xlsx">
+      </div>
+      <div class="upload-item" id="wrap_infra">
+        <label for="infra_file">Infrastructure <span class="req">*</span></label>
+        <input type="file" id="infra_file" accept=".xlsx">
+      </div>
+      <div class="upload-item" id="wrap_ef">
+        <label for="ef_file">Emission Factors <em>(optional)</em></label>
+        <input type="file" id="ef_file" accept=".xlsx">
+      </div>
+    </div>
+    <div class="run-row">
+      <div class="pyodide-loading" id="pyodideStatus">Loading Python engine… (first load ~10 s)</div>
+      <button id="runBtn" disabled>&#9654;&#xFE0F; Run Analysis</button>
+    </div>
+  </div>
+
+  <!-- Status / results summary -->
+  <div class="card status-card" id="statusCard">
+    <h2>Status</h2>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+    <div id="statusLines"></div>
+
+    <div class="summary-grid" id="validationSummary"></div>
+    <div id="enrichmentSummary"></div>
+    <div id="unresolvedSection"></div>
+    <div id="errorSection"></div>
+  </div>
+
+  <!-- Report -->
+  <div class="report-section" id="reportSection">
+    <div class="card" style="padding-bottom:.5rem">
+      <h2>Emissions Report</h2>
+      <div class="report-actions">
+        <button class="download-btn" id="downloadBtn">&#11123; Download HTML report</button>
+      </div>
+      <iframe id="reportFrame" title="Emissions report"></iframe>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
+<script>
+// ── State ──────────────────────────────────────────────────────────────────────
+let pyodide = null;
+let reportHtml = "";
+
+// ── DOM helpers ────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function setProgress(pct) {
+  $("progressBar").style.width = pct + "%";
+}
+
+function addStatus(msg, cls = "") {
+  const d = document.createElement("div");
+  d.className = "status-line" + (cls ? " " + cls : "");
+  d.textContent = msg;
+  $("statusLines").appendChild(d);
+}
+
+function showStatusCard() {
+  $("statusCard").classList.add("visible");
+}
+
+function markWrap(id, hasFile) {
+  $("wrap_" + id).classList.toggle("has-file", hasFile);
+}
+
+// ── File watchers ──────────────────────────────────────────────────────────────
+["cell_site", "active", "passive", "infra", "ef"].forEach(id => {
+  $(id + "_file").addEventListener("change", e => {
+    markWrap(id, e.target.files.length > 0);
+    updateRunBtn();
+  });
+});
+
+function updateRunBtn() {
+  const required = ["cell_site", "active", "passive", "infra"];
+  const allPresent = required.every(id => $(id + "_file").files.length > 0);
+  $("runBtn").disabled = !pyodide || !allPresent;
+}
+
+// ── Pyodide init ───────────────────────────────────────────────────────────────
+async function initPyodide() {
+  try {
+    pyodide = await loadPyodide();
+    await pyodide.loadPackage("openpyxl");
+
+    // Fetch pipeline Python files and write to virtual FS
+    const pipelineFiles = [
+      "validate", "enrich", "model_embodied", "model_operational",
+      "analyze", "visualise", "main"
+    ];
+    for (const name of pipelineFiles) {
+      const resp = await fetch(`pipeline/${name}.py`);
+      if (!resp.ok) throw new Error(`Failed to fetch pipeline/${name}.py`);
+      const src = await resp.text();
+      pyodide.FS.writeFile(`/home/pyodide/${name}.py`, src);
+    }
+
+    await pyodide.runPythonAsync(`
+import sys
+sys.path.insert(0, '/home/pyodide')
+import main as _pipeline_main
+`);
+
+    $("pyodideStatus").textContent = "✓ Python engine ready";
+    $("pyodideStatus").style.color = "#2d6a2d";
+    updateRunBtn();
+  } catch (err) {
+    $("pyodideStatus").textContent = "Failed to load Python engine: " + err;
+    $("pyodideStatus").style.color = "#c00";
+    console.error(err);
+  }
+}
+
+// ── Run analysis ───────────────────────────────────────────────────────────────
+$("runBtn").addEventListener("click", runAnalysis);
+
+async function runAnalysis() {
+  $("runBtn").disabled = true;
+  $("reportSection").classList.remove("visible");
+  $("statusLines").innerHTML = "";
+  $("validationSummary").innerHTML = "";
+  $("enrichmentSummary").innerHTML = "";
+  $("unresolvedSection").innerHTML = "";
+  $("errorSection").innerHTML = "";
+  reportHtml = "";
+  showStatusCard();
+  setProgress(5);
+
+  try {
+    // Read files
+    addStatus("Reading files…");
+    const readBuf = async id => {
+      const files = $(id + "_file").files;
+      return files.length ? new Uint8Array(await files[0].arrayBuffer()) : null;
+    };
+
+    const csBuf     = await readBuf("cell_site");
+    const activeBuf = await readBuf("active");
+    const passiveBuf = await readBuf("passive");
+    const infraBuf  = await readBuf("infra");
+    const efBuf     = await readBuf("ef");
+    setProgress(15);
+
+    // Pass bytes to Python
+    pyodide.globals.set("_cs_bytes",     csBuf);
+    pyodide.globals.set("_active_bytes", activeBuf);
+    pyodide.globals.set("_passive_bytes",passiveBuf);
+    pyodide.globals.set("_infra_bytes",  infraBuf);
+    pyodide.globals.set("_ef_bytes",     efBuf);
+
+    addStatus("Validating…");
+    setProgress(25);
+
+    // Run pipeline
+    const resultProxy = await pyodide.runPythonAsync(`
+_pipeline_main.run_analysis(
+    bytes(_cs_bytes),
+    bytes(_active_bytes),
+    bytes(_passive_bytes),
+    bytes(_infra_bytes),
+    bytes(_ef_bytes) if _ef_bytes is not None else None,
+)
+`);
+    setProgress(85);
+
+    const result = resultProxy.toJs ? resultProxy.toJs({ dict_converter: Object.fromEntries }) : resultProxy;
+    resultProxy.destroy?.();
+
+    // Handle errors
+    const errors = Array.isArray(result.errors) ? result.errors : (result.errors ? [...result.errors] : []);
+    if (errors.length) {
+      errors.forEach(e => addStatus("Error: " + e, "error"));
+    }
+
+    // Validation summary
+    const val = result.validation;
+    if (val && typeof val === "object") {
+      const schemas = { cell_site: "Cell Sites", active: "Active", passive: "Passive", infrastructure: "Infrastructure" };
+      const grid = $("validationSummary");
+      grid.innerHTML = "<div style='grid-column:1/-1;font-size:.8rem;font-weight:600;color:#333;margin-bottom:.2rem'>Validation</div>";
+      for (const [key, label] of Object.entries(schemas)) {
+        const v = val[key] || {};
+        const box = document.createElement("div");
+        box.className = "summary-box";
+        box.innerHTML = `<div class="label">${label}</div><div class="counts">` +
+          `<span class="ok">${v.ok || 0} OK</span> · ` +
+          `<span class="warned">${v.warned || 0} warned</span> · ` +
+          `<span class="rej">${v.rejected || 0} rejected</span></div>`;
+        grid.appendChild(box);
+      }
+    }
+
+    // Enrichment summary
+    const enr = result.enrichment;
+    if (enr && typeof enr === "object") {
+      const lines = [];
+      for (const [schema, sources] of Object.entries(enr)) {
+        if (!sources || typeof sources !== "object") continue;
+        const parts = [];
+        for (const [src, cnt] of Object.entries(sources)) {
+          if (cnt > 0) parts.push(`${src}: ${cnt}`);
+        }
+        if (parts.length) lines.push(`${schema} — ${parts.join(", ")}`);
+      }
+      if (lines.length) {
+        const div = $("enrichmentSummary");
+        div.innerHTML = `<div style="font-size:.8rem;font-weight:600;color:#333;margin-top:.75rem">Enrichment</div>` +
+          lines.map(l => `<div style="font-size:.8rem;color:#555;margin-top:.2rem">${l}</div>`).join("");
+      }
+    }
+
+    // Unresolved fields
+    const unres = Array.isArray(result.unresolved) ? result.unresolved : [];
+    if (unres.length) {
+      const sec = $("unresolvedSection");
+      sec.innerHTML = `<div class="unresolved-list"><h4>⚠ ${unres.length} field(s) could not be enriched — add them to emission_factors.xlsx and re-run</h4><ul>` +
+        unres.slice(0, 30).map(u => {
+          const arr = Array.isArray(u) ? u : (u.toJs ? u.toJs() : [u]);
+          return `<li>${arr[0]} → ${arr[1]} (${arr[2] || ""})</li>`;
+        }).join("") +
+        (unres.length > 30 ? `<li>…and ${unres.length - 30} more</li>` : "") +
+        `</ul></div>`;
+    }
+
+    // Report
+    const html = result.html || (typeof result.get === "function" ? result.get("html") : "");
+    if (html && html.length > 100) {
+      reportHtml = html;
+      $("reportFrame").srcdoc = html;
+      $("reportSection").classList.add("visible");
+      addStatus("Report generated successfully.");
+    } else if (!errors.length) {
+      addStatus("No report generated — check that your files contain data.", "error");
+    }
+
+    setProgress(100);
+  } catch (err) {
+    addStatus("Pipeline error: " + err, "error");
+    console.error(err);
+    setProgress(100);
+  } finally {
+    updateRunBtn();
+  }
+}
+
+// ── Download ───────────────────────────────────────────────────────────────────
+$("downloadBtn").addEventListener("click", () => {
+  if (!reportHtml) return;
+  const blob = new Blob([reportHtml], { type: "text/html" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "emissions_report.html";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// ── Boot ───────────────────────────────────────────────────────────────────────
+initPyodide();
+</script>
+</body>
+</html>
