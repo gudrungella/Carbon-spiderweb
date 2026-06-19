@@ -188,6 +188,22 @@
   }
 
   .engine-status { font-size: .78rem; color: #888; text-align: center; padding: .5rem; }
+
+  /* ── Footer ─────────────────────────────────────────────────────────────── */
+  footer {
+    border-top: 1px solid #e0e4ee;
+    margin-top: 1rem;
+    padding: 1.75rem 1.5rem;
+    max-width: 960px;
+    margin-left: auto;
+    margin-right: auto;
+    font-size: .75rem;
+    color: #999;
+    line-height: 1.6;
+  }
+  footer a { color: #999; }
+  footer strong { color: #777; font-weight: 600; }
+  .footer-row { margin-bottom: .4rem; }
 </style>
 </head>
 <body>
@@ -344,6 +360,11 @@
   </div>
 
 </main>
+
+<footer>
+  <div class="footer-row"><strong>Originally developed by:</strong> Gudrun Gudmundsdottir &mdash; <a href="mailto:gfjgu@dtu.dk">gfjgu@dtu.dk</a></div>
+  <div class="footer-row"><strong>Disclaimer:</strong> This tool was built with the assistance of <a href="https://claude.ai" target="_blank" rel="noopener">Claude&nbsp;AI</a> (Anthropic, claude-sonnet-4-6). It is provided as-is for research and informational purposes. Neither the author nor the Technical University of Denmark accepts any responsibility for the accuracy of results or decisions made on the basis of this tool.</div>
+</footer>
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
 <script>
