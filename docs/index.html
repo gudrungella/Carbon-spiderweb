@@ -3,31 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Telecom Inventory Emissions Calculator</title>
+<title>Carbon Spiderweb</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: system-ui, -apple-system, sans-serif; background: #f5f7fa; color: #1a1a2e; }
 
-  header {
+  /* ── Hero ──────────────────────────────────────────────────────────────── */
+  .hero {
     background: #07011E;
     color: #fff;
-    padding: 1.25rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
+    text-align: center;
+    padding: 3.5rem 2rem 2.75rem;
   }
-  header h1 { font-size: 1.2rem; font-weight: 600; }
-  .privacy-badge {
-    margin-left: auto;
-    background: #1a3a1a;
-    border: 1px solid #2d6a2d;
-    color: #7ed97e;
-    padding: .3rem .75rem;
+  .hero-web { font-size: 3rem; line-height: 1; margin-bottom: .75rem; }
+  .hero h1 { font-size: 2rem; font-weight: 700; letter-spacing: -.02em; margin-bottom: .5rem; }
+  .hero-sub {
+    font-size: 1.05rem;
+    color: #b0b8d8;
+    margin-bottom: 1.25rem;
+  }
+  .paper-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    color: #b0b8d8;
+    font-size: .82rem;
+    text-decoration: none;
+    cursor: default;
+    opacity: .6;
+  }
+  .paper-link .badge {
+    background: #2a2060;
+    border: 1px solid #5040b0;
+    color: #c0b8f8;
+    font-size: .72rem;
+    padding: .15rem .5rem;
     border-radius: 20px;
-    font-size: .8rem;
-    white-space: nowrap;
   }
 
+  /* ── Layout ────────────────────────────────────────────────────────────── */
   main { max-width: 960px; margin: 2rem auto; padding: 0 1.5rem; }
 
   .card {
@@ -40,12 +54,37 @@
   .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: .6rem; color: #3805E3; }
   .card p.subtitle { font-size: .82rem; color: #666; margin-bottom: 1rem; }
 
-  /* Templates */
-  .template-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: .6rem;
+  /* ── Intro ─────────────────────────────────────────────────────────────── */
+  .intro-text {
+    font-size: .93rem;
+    line-height: 1.7;
+    color: #333;
   }
+  .intro-text a { color: #3805E3; }
+
+  /* ── Features ──────────────────────────────────────────────────────────── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: .85rem;
+  }
+  .feature-box {
+    background: #f8f8ff;
+    border: 1px solid #e4e2f8;
+    border-radius: 10px;
+    padding: 1.1rem 1rem;
+  }
+  .feature-icon { font-size: 1.6rem; margin-bottom: .5rem; }
+  .feature-title {
+    font-size: .85rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: .3rem;
+  }
+  .feature-desc { font-size: .78rem; color: #666; line-height: 1.5; }
+
+  /* ── Templates ─────────────────────────────────────────────────────────── */
+  .template-grid { display: flex; flex-wrap: wrap; gap: .6rem; }
   .template-link {
     display: inline-flex;
     align-items: center;
@@ -62,9 +101,8 @@
   .template-link:hover { background: #ece8ff; border-color: #3805E3; }
   .template-link.optional { color: #666; border-style: dashed; background: #fafafa; }
   .template-link.optional:hover { background: #f0f0f0; border-color: #888; }
-  .template-icon { font-size: .9rem; }
 
-  /* Upload */
+  /* ── Upload ─────────────────────────────────────────────────────────────── */
   .upload-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -100,14 +138,14 @@
   button#runBtn:hover:not(:disabled) { background: #2504b0; }
   button#runBtn:disabled { opacity: .5; cursor: not-allowed; }
 
+  /* ── Status ─────────────────────────────────────────────────────────────── */
   .status-card { display: none; }
   .status-card.visible { display: block; }
   .status-line { font-size: .85rem; color: #555; margin-bottom: .4rem; }
   .status-line.error { color: #c00; font-weight: 600; }
 
   .progress-bar-wrap {
-    height: 6px; background: #eee; border-radius: 3px; margin: .75rem 0;
-    overflow: hidden;
+    height: 6px; background: #eee; border-radius: 3px; margin: .75rem 0; overflow: hidden;
   }
   .progress-bar {
     height: 100%; background: #3805E3; border-radius: 3px;
@@ -120,12 +158,7 @@
     gap: .6rem;
     margin-top: .75rem;
   }
-  .summary-box {
-    background: #f5f7fa;
-    border-radius: 6px;
-    padding: .6rem .8rem;
-    font-size: .8rem;
-  }
+  .summary-box { background: #f5f7fa; border-radius: 6px; padding: .6rem .8rem; font-size: .8rem; }
   .summary-box .label { color: #666; margin-bottom: .2rem; }
   .summary-box .counts { font-weight: 600; }
   .counts .ok     { color: #2d6a2d; }
@@ -133,78 +166,130 @@
   .counts .rej    { color: #c00; }
 
   .unresolved-list {
-    background: #fffbeb;
-    border: 1px solid #f59e0b;
-    border-radius: 6px;
-    padding: .75rem 1rem;
-    margin-top: .75rem;
-    font-size: .8rem;
-    max-height: 180px;
-    overflow-y: auto;
+    background: #fffbeb; border: 1px solid #f59e0b; border-radius: 6px;
+    padding: .75rem 1rem; margin-top: .75rem; font-size: .8rem;
+    max-height: 180px; overflow-y: auto;
   }
   .unresolved-list h4 { color: #92400e; margin-bottom: .4rem; }
   .unresolved-list li { margin-left: 1rem; color: #555; }
 
+  /* ── Report ─────────────────────────────────────────────────────────────── */
   .report-section { display: none; }
   .report-section.visible { display: block; }
   .report-actions { display: flex; gap: .75rem; margin-bottom: .75rem; }
   .download-btn {
-    background: #f5f7fa;
-    border: 1px solid #ccc;
-    padding: .4rem 1rem;
-    border-radius: 6px;
-    font-size: .85rem;
-    cursor: pointer;
+    background: #f5f7fa; border: 1px solid #ccc; padding: .4rem 1rem;
+    border-radius: 6px; font-size: .85rem; cursor: pointer;
   }
   .download-btn:hover { background: #e8ecf2; }
   iframe#reportFrame {
-    width: 100%;
-    height: 900px;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
+    width: 100%; height: 900px;
+    border: 1px solid #e0e0e0; border-radius: 8px;
   }
 
-  .engine-status {
-    font-size: .78rem;
-    color: #888;
-    text-align: center;
-    padding: .5rem;
-  }
+  .engine-status { font-size: .78rem; color: #888; text-align: center; padding: .5rem; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>Telecom Inventory Emissions Calculator</h1>
-  <span class="privacy-badge">&#x1F512; Runs entirely in your browser — no data is transmitted</span>
+<!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+<header class="hero">
+  <div class="hero-web">🕸️</div>
+  <h1>Carbon Spiderweb</h1>
+  <p class="hero-sub">Calculate the carbon footprint of your telecom network</p>
+  <a class="paper-link" href="#" aria-disabled="true" tabindex="-1" onclick="return false">
+    📄 Peer-reviewed paper <span class="badge">Coming soon</span>
+  </a>
 </header>
 
 <main>
 
-  <!-- Templates -->
+  <!-- ── Introduction ──────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>About</h2>
+    <p class="intro-text">
+      Carbon Spiderweb tracks the embodied and operational emissions of your
+      telecommunication network with automatic data quality, sensitivity and uncertainty
+      checks. The tool runs entirely in your browser — your data never physically leaves
+      your device, nor do the results
+      (<a href="https://github.com/gudrungella/Carbon-spiderweb" target="_blank" rel="noopener">source code</a>).
+    </p>
+  </div>
+
+  <!-- ── Features ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    <h2>Why Carbon Spiderweb?</h2>
+    <div class="features-grid">
+
+      <div class="feature-box">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Instant carbon report</div>
+        <div class="feature-desc">Generates a full emissions breakdown with charts that pinpoint the hotspots in your network at component, site, and network level.</div>
+      </div>
+
+      <div class="feature-box">
+        <div class="feature-icon">🖱️</div>
+        <div class="feature-title">Easy to use</div>
+        <div class="feature-desc">No installation, no coding. Fill in the Excel templates, upload them, click Run. Works in any modern browser.</div>
+      </div>
+
+      <div class="feature-box">
+        <div class="feature-icon">🔬</div>
+        <div class="feature-title">Peer-reviewed methodology</div>
+        <div class="feature-desc">Built on published research. Embodied, operational, and end-of-life emissions follow a documented, citable approach.</div>
+      </div>
+
+      <div class="feature-box">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Secure by design</div>
+        <div class="feature-desc">All computation happens in your browser via WebAssembly. No data is sent to any server — ever.</div>
+      </div>
+
+      <div class="feature-box">
+        <div class="feature-icon">🌐</div>
+        <div class="feature-title">Industry-aligned</div>
+        <div class="feature-desc">Uses the same methodology adopted by other network operators, enabling meaningful cross-operator comparisons.</div>
+      </div>
+
+      <div class="feature-box">
+        <div class="feature-icon">🔄</div>
+        <div class="feature-title">Year-over-year tracking</div>
+        <div class="feature-desc">Consistent inputs and methodology make results fully reproducible, so you can track progress and meet reporting obligations reliably.</div>
+      </div>
+
+      <div class="feature-box">
+        <div class="feature-icon">📉</div>
+        <div class="feature-title">Measure your reductions</div>
+        <div class="feature-desc">Sensitivity analysis reveals which changes — equipment swaps, energy mix, lifetime extensions — have the greatest impact on your footprint.</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Templates ─────────────────────────────────────────────────────── -->
   <div class="card">
     <h2>Download Templates</h2>
     <p class="subtitle">Download the Excel templates, fill in your data, then upload them below.</p>
     <div class="template-grid">
       <a class="template-link" href="templates/cell_site.xlsx" download>
-        <span class="template-icon">&#x1F4C4;</span> Cell Sites
+        📄 Cell Sites
       </a>
       <a class="template-link" href="templates/active_components.xlsx" download>
-        <span class="template-icon">&#x1F4C4;</span> Active Components
+        📄 Active Components
       </a>
       <a class="template-link" href="templates/passive_components.xlsx" download>
-        <span class="template-icon">&#x1F4C4;</span> Passive Components
+        📄 Passive Components
       </a>
       <a class="template-link" href="templates/infrastructure.xlsx" download>
-        <span class="template-icon">&#x1F4C4;</span> Infrastructure
+        📄 Infrastructure
       </a>
       <a class="template-link optional" href="templates/emission_factors.xlsx" download>
-        <span class="template-icon">&#x1F4C4;</span> Emission Factors <em>(optional)</em>
+        📄 Emission Factors <em>(optional)</em>
       </a>
     </div>
   </div>
 
-  <!-- Upload panel -->
+  <!-- ── Upload ─────────────────────────────────────────────────────────── -->
   <div class="card">
     <h2>Upload Data Files</h2>
     <p class="subtitle">The four required files must be filled from the templates above. The emission factors file is optional.</p>
@@ -232,11 +317,11 @@
     </div>
     <div class="run-row">
       <div class="engine-status" id="engineStatus">Loading Python engine… (first load ~30 s)</div>
-      <button id="runBtn" disabled>&#9654; Run Analysis</button>
+      <button id="runBtn" disabled>▶ Run Analysis</button>
     </div>
   </div>
 
-  <!-- Status / results summary -->
+  <!-- ── Status ─────────────────────────────────────────────────────────── -->
   <div class="card status-card" id="statusCard">
     <h2>Status</h2>
     <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
@@ -247,12 +332,12 @@
     <div id="errorSection"></div>
   </div>
 
-  <!-- Report -->
+  <!-- ── Report ─────────────────────────────────────────────────────────── -->
   <div class="report-section" id="reportSection">
     <div class="card" style="padding-bottom:.5rem">
       <h2>Emissions Report</h2>
       <div class="report-actions">
-        <button class="download-btn" id="downloadBtn">&#11123; Download HTML report</button>
+        <button class="download-btn" id="downloadBtn">⬇ Download HTML report</button>
       </div>
       <iframe id="reportFrame" title="Emissions report"></iframe>
     </div>
@@ -262,17 +347,13 @@
 
 <script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
 <script>
-// ── State ──────────────────────────────────────────────────────────────────────
 let pyodide = null;
 let pyodideReady = false;
 let reportHtml = "";
 
-// ── DOM helpers ────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
-function setProgress(pct) {
-  $("progressBar").style.width = pct + "%";
-}
+function setProgress(pct) { $("progressBar").style.width = pct + "%"; }
 
 function addStatus(msg, cls = "") {
   const d = document.createElement("div");
@@ -281,15 +362,12 @@ function addStatus(msg, cls = "") {
   $("statusLines").appendChild(d);
 }
 
-function showStatusCard() {
-  $("statusCard").classList.add("visible");
-}
+function showStatusCard() { $("statusCard").classList.add("visible"); }
 
 function markWrap(id, hasFile) {
   $("wrap_" + id).classList.toggle("has-file", hasFile);
 }
 
-// ── File watchers ──────────────────────────────────────────────────────────────
 ["cell_site", "active", "passive", "infra", "ef"].forEach(id => {
   $(id + "_file").addEventListener("change", e => {
     markWrap(id, e.target.files.length > 0);
@@ -303,13 +381,11 @@ function updateRunBtn() {
   $("runBtn").disabled = !pyodideReady || !allPresent;
 }
 
-// ── Pyodide init ───────────────────────────────────────────────────────────────
 async function initPyodide() {
   try {
     $("engineStatus").textContent = "Loading Python engine…";
     pyodide = await loadPyodide();
 
-    // openpyxl is a pure-Python package not in Pyodide's built-in set — use micropip
     $("engineStatus").textContent = "Installing openpyxl…";
     await pyodide.loadPackage("micropip");
     await pyodide.runPythonAsync(`
@@ -317,7 +393,6 @@ import micropip
 await micropip.install('openpyxl')
 `);
 
-    // Fetch pipeline files and write to Pyodide virtual FS
     $("engineStatus").textContent = "Loading pipeline…";
     const pipelineFiles = [
       "validate", "enrich", "model_embodied", "model_operational",
@@ -347,7 +422,6 @@ import main as _pipeline_main
   }
 }
 
-// ── Run analysis ───────────────────────────────────────────────────────────────
 $("runBtn").addEventListener("click", runAnalysis);
 
 async function runAnalysis() {
@@ -376,7 +450,6 @@ async function runAnalysis() {
     const efBuf      = await readBuf("ef");
     setProgress(15);
 
-    // Pass bytes into Python globals
     pyodide.globals.set("_cs_bytes",      csBuf);
     pyodide.globals.set("_active_bytes",  activeBuf);
     pyodide.globals.set("_passive_bytes", passiveBuf);
@@ -402,15 +475,10 @@ _pipeline_main.run_analysis(
       : resultProxy;
     resultProxy.destroy?.();
 
-    // Errors
     const errors = Array.isArray(result.errors)
-      ? result.errors
-      : (result.errors ? [...result.errors] : []);
-    if (errors.length) {
-      errors.forEach(e => addStatus("Error: " + e, "error"));
-    }
+      ? result.errors : (result.errors ? [...result.errors] : []);
+    if (errors.length) errors.forEach(e => addStatus("Error: " + e, "error"));
 
-    // Validation summary
     const val = result.validation;
     if (val && typeof val === "object") {
       const schemas = {
@@ -431,7 +499,6 @@ _pipeline_main.run_analysis(
       }
     }
 
-    // Enrichment summary
     const enr = result.enrichment;
     if (enr && typeof enr === "object") {
       const lines = [];
@@ -444,14 +511,12 @@ _pipeline_main.run_analysis(
         if (parts.length) lines.push(`${schema} — ${parts.join(", ")}`);
       }
       if (lines.length) {
-        const div = $("enrichmentSummary");
-        div.innerHTML =
+        $("enrichmentSummary").innerHTML =
           `<div style="font-size:.8rem;font-weight:600;color:#333;margin-top:.75rem">Enrichment</div>` +
           lines.map(l => `<div style="font-size:.8rem;color:#555;margin-top:.2rem">${l}</div>`).join("");
       }
     }
 
-    // Unresolved fields
     const unres = Array.isArray(result.unresolved) ? result.unresolved : [];
     if (unres.length) {
       $("unresolvedSection").innerHTML =
@@ -465,7 +530,6 @@ _pipeline_main.run_analysis(
         `</ul></div>`;
     }
 
-    // Report
     const html = result.html || (typeof result.get === "function" ? result.get("html") : "");
     if (html && html.length > 100) {
       reportHtml = html;
@@ -486,7 +550,6 @@ _pipeline_main.run_analysis(
   }
 }
 
-// ── Download report ────────────────────────────────────────────────────────────
 $("downloadBtn").addEventListener("click", () => {
   if (!reportHtml) return;
   const blob = new Blob([reportHtml], { type: "text/html" });
@@ -497,7 +560,6 @@ $("downloadBtn").addEventListener("click", () => {
   URL.revokeObjectURL(a.href);
 });
 
-// ── Boot ───────────────────────────────────────────────────────────────────────
 initPyodide();
 </script>
 </body>
