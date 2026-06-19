@@ -37,8 +37,34 @@
     padding: 1.5rem;
     margin-bottom: 1.5rem;
   }
-  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; color: #3805E3; }
+  .card h2 { font-size: 1rem; font-weight: 600; margin-bottom: .6rem; color: #3805E3; }
+  .card p.subtitle { font-size: .82rem; color: #666; margin-bottom: 1rem; }
 
+  /* Templates */
+  .template-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .6rem;
+  }
+  .template-link {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .45rem .9rem;
+    border: 1px solid #d0d5e8;
+    border-radius: 6px;
+    font-size: .82rem;
+    color: #3805E3;
+    text-decoration: none;
+    background: #f8f8ff;
+    transition: background .15s, border-color .15s;
+  }
+  .template-link:hover { background: #ece8ff; border-color: #3805E3; }
+  .template-link.optional { color: #666; border-style: dashed; background: #fafafa; }
+  .template-link.optional:hover { background: #f0f0f0; border-color: #888; }
+  .template-icon { font-size: .9rem; }
+
+  /* Upload */
   .upload-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -121,7 +147,6 @@
 
   .report-section { display: none; }
   .report-section.visible { display: block; }
-  .report-section h2 { font-size: 1rem; font-weight: 600; margin-bottom: .75rem; color: #3805E3; }
   .report-actions { display: flex; gap: .75rem; margin-bottom: .75rem; }
   .download-btn {
     background: #f5f7fa;
@@ -139,7 +164,7 @@
     border-radius: 8px;
   }
 
-  .pyodide-loading {
+  .engine-status {
     font-size: .78rem;
     color: #888;
     text-align: center;
@@ -156,9 +181,33 @@
 
 <main>
 
+  <!-- Templates -->
+  <div class="card">
+    <h2>Download Templates</h2>
+    <p class="subtitle">Download the Excel templates, fill in your data, then upload them below.</p>
+    <div class="template-grid">
+      <a class="template-link" href="templates/cell_site.xlsx" download>
+        <span class="template-icon">&#x1F4C4;</span> Cell Sites
+      </a>
+      <a class="template-link" href="templates/active_components.xlsx" download>
+        <span class="template-icon">&#x1F4C4;</span> Active Components
+      </a>
+      <a class="template-link" href="templates/passive_components.xlsx" download>
+        <span class="template-icon">&#x1F4C4;</span> Passive Components
+      </a>
+      <a class="template-link" href="templates/infrastructure.xlsx" download>
+        <span class="template-icon">&#x1F4C4;</span> Infrastructure
+      </a>
+      <a class="template-link optional" href="templates/emission_factors.xlsx" download>
+        <span class="template-icon">&#x1F4C4;</span> Emission Factors <em>(optional)</em>
+      </a>
+    </div>
+  </div>
+
   <!-- Upload panel -->
   <div class="card">
     <h2>Upload Data Files</h2>
+    <p class="subtitle">The four required files must be filled from the templates above. The emission factors file is optional.</p>
     <div class="upload-grid">
       <div class="upload-item" id="wrap_cell_site">
         <label for="cell_site_file">Cell Sites <span class="req">*</span></label>
@@ -182,8 +231,8 @@
       </div>
     </div>
     <div class="run-row">
-      <div class="pyodide-loading" id="pyodideStatus">Loading Python engine… (first load ~10 s)</div>
-      <button id="runBtn" disabled>&#9654;&#xFE0F; Run Analysis</button>
+      <div class="engine-status" id="engineStatus">Loading Python engine… (first load ~30 s)</div>
+      <button id="runBtn" disabled>&#9654; Run Analysis</button>
     </div>
   </div>
 
@@ -192,7 +241,6 @@
     <h2>Status</h2>
     <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
     <div id="statusLines"></div>
-
     <div class="summary-grid" id="validationSummary"></div>
     <div id="enrichmentSummary"></div>
     <div id="unresolvedSection"></div>
@@ -216,6 +264,7 @@
 <script>
 // ── State ──────────────────────────────────────────────────────────────────────
 let pyodide = null;
+let pyodideReady = false;
 let reportHtml = "";
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────
@@ -251,16 +300,25 @@ function markWrap(id, hasFile) {
 function updateRunBtn() {
   const required = ["cell_site", "active", "passive", "infra"];
   const allPresent = required.every(id => $(id + "_file").files.length > 0);
-  $("runBtn").disabled = !pyodide || !allPresent;
+  $("runBtn").disabled = !pyodideReady || !allPresent;
 }
 
 // ── Pyodide init ───────────────────────────────────────────────────────────────
 async function initPyodide() {
   try {
+    $("engineStatus").textContent = "Loading Python engine…";
     pyodide = await loadPyodide();
-    await pyodide.loadPackage("openpyxl");
 
-    // Fetch pipeline Python files and write to virtual FS
+    // openpyxl is a pure-Python package not in Pyodide's built-in set — use micropip
+    $("engineStatus").textContent = "Installing openpyxl…";
+    await pyodide.loadPackage("micropip");
+    await pyodide.runPythonAsync(`
+import micropip
+await micropip.install('openpyxl')
+`);
+
+    // Fetch pipeline files and write to Pyodide virtual FS
+    $("engineStatus").textContent = "Loading pipeline…";
     const pipelineFiles = [
       "validate", "enrich", "model_embodied", "model_operational",
       "analyze", "visualise", "main"
@@ -278,12 +336,13 @@ sys.path.insert(0, '/home/pyodide')
 import main as _pipeline_main
 `);
 
-    $("pyodideStatus").textContent = "✓ Python engine ready";
-    $("pyodideStatus").style.color = "#2d6a2d";
+    pyodideReady = true;
+    $("engineStatus").textContent = "Python engine ready";
+    $("engineStatus").style.color = "#2d6a2d";
     updateRunBtn();
   } catch (err) {
-    $("pyodideStatus").textContent = "Failed to load Python engine: " + err;
-    $("pyodideStatus").style.color = "#c00";
+    $("engineStatus").textContent = "Failed to load Python engine: " + err;
+    $("engineStatus").style.color = "#c00";
     console.error(err);
   }
 }
@@ -304,31 +363,29 @@ async function runAnalysis() {
   setProgress(5);
 
   try {
-    // Read files
     addStatus("Reading files…");
     const readBuf = async id => {
       const files = $(id + "_file").files;
       return files.length ? new Uint8Array(await files[0].arrayBuffer()) : null;
     };
 
-    const csBuf     = await readBuf("cell_site");
-    const activeBuf = await readBuf("active");
+    const csBuf      = await readBuf("cell_site");
+    const activeBuf  = await readBuf("active");
     const passiveBuf = await readBuf("passive");
-    const infraBuf  = await readBuf("infra");
-    const efBuf     = await readBuf("ef");
+    const infraBuf   = await readBuf("infra");
+    const efBuf      = await readBuf("ef");
     setProgress(15);
 
-    // Pass bytes to Python
-    pyodide.globals.set("_cs_bytes",     csBuf);
-    pyodide.globals.set("_active_bytes", activeBuf);
-    pyodide.globals.set("_passive_bytes",passiveBuf);
-    pyodide.globals.set("_infra_bytes",  infraBuf);
-    pyodide.globals.set("_ef_bytes",     efBuf);
+    // Pass bytes into Python globals
+    pyodide.globals.set("_cs_bytes",      csBuf);
+    pyodide.globals.set("_active_bytes",  activeBuf);
+    pyodide.globals.set("_passive_bytes", passiveBuf);
+    pyodide.globals.set("_infra_bytes",   infraBuf);
+    pyodide.globals.set("_ef_bytes",      efBuf);
 
-    addStatus("Validating…");
+    addStatus("Validating and enriching…");
     setProgress(25);
 
-    // Run pipeline
     const resultProxy = await pyodide.runPythonAsync(`
 _pipeline_main.run_analysis(
     bytes(_cs_bytes),
@@ -340,11 +397,15 @@ _pipeline_main.run_analysis(
 `);
     setProgress(85);
 
-    const result = resultProxy.toJs ? resultProxy.toJs({ dict_converter: Object.fromEntries }) : resultProxy;
+    const result = resultProxy.toJs
+      ? resultProxy.toJs({ dict_converter: Object.fromEntries })
+      : resultProxy;
     resultProxy.destroy?.();
 
-    // Handle errors
-    const errors = Array.isArray(result.errors) ? result.errors : (result.errors ? [...result.errors] : []);
+    // Errors
+    const errors = Array.isArray(result.errors)
+      ? result.errors
+      : (result.errors ? [...result.errors] : []);
     if (errors.length) {
       errors.forEach(e => addStatus("Error: " + e, "error"));
     }
@@ -352,7 +413,10 @@ _pipeline_main.run_analysis(
     // Validation summary
     const val = result.validation;
     if (val && typeof val === "object") {
-      const schemas = { cell_site: "Cell Sites", active: "Active", passive: "Passive", infrastructure: "Infrastructure" };
+      const schemas = {
+        cell_site: "Cell Sites", active: "Active",
+        passive: "Passive", infrastructure: "Infrastructure"
+      };
       const grid = $("validationSummary");
       grid.innerHTML = "<div style='grid-column:1/-1;font-size:.8rem;font-weight:600;color:#333;margin-bottom:.2rem'>Validation</div>";
       for (const [key, label] of Object.entries(schemas)) {
@@ -381,7 +445,8 @@ _pipeline_main.run_analysis(
       }
       if (lines.length) {
         const div = $("enrichmentSummary");
-        div.innerHTML = `<div style="font-size:.8rem;font-weight:600;color:#333;margin-top:.75rem">Enrichment</div>` +
+        div.innerHTML =
+          `<div style="font-size:.8rem;font-weight:600;color:#333;margin-top:.75rem">Enrichment</div>` +
           lines.map(l => `<div style="font-size:.8rem;color:#555;margin-top:.2rem">${l}</div>`).join("");
       }
     }
@@ -389,8 +454,9 @@ _pipeline_main.run_analysis(
     // Unresolved fields
     const unres = Array.isArray(result.unresolved) ? result.unresolved : [];
     if (unres.length) {
-      const sec = $("unresolvedSection");
-      sec.innerHTML = `<div class="unresolved-list"><h4>⚠ ${unres.length} field(s) could not be enriched — add them to emission_factors.xlsx and re-run</h4><ul>` +
+      $("unresolvedSection").innerHTML =
+        `<div class="unresolved-list"><h4>${unres.length} field(s) could not be enriched — ` +
+        `add them to emission_factors.xlsx and re-run</h4><ul>` +
         unres.slice(0, 30).map(u => {
           const arr = Array.isArray(u) ? u : (u.toJs ? u.toJs() : [u]);
           return `<li>${arr[0]} → ${arr[1]} (${arr[2] || ""})</li>`;
@@ -420,7 +486,7 @@ _pipeline_main.run_analysis(
   }
 }
 
-// ── Download ───────────────────────────────────────────────────────────────────
+// ── Download report ────────────────────────────────────────────────────────────
 $("downloadBtn").addEventListener("click", () => {
   if (!reportHtml) return;
   const blob = new Blob([reportHtml], { type: "text/html" });
